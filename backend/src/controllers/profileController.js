@@ -1,182 +1,131 @@
 
 const User = require("../models/User");
 
-// ================= GET PROFILE =================
+const checkCompleted = (user) =>
+  Boolean(
+    user.username &&
+    user.phone &&
+    user.location &&
+    user.professionalTitle &&
+    user.professionalSummary &&
+    user.skills?.length > 0 &&
+    user.resume
+  );
+
+const buildProfile = (user) => ({
+  id:                  user._id,
+  username:            user.username,
+  email:               user.email,
+  phone:               user.phone,
+  location:            user.location,
+  professionalTitle:   user.professionalTitle,
+  professionalSummary: user.professionalSummary,
+  skills:              user.skills         || [],
+  resume:              user.resume         || null,
+  profileCompleted:    user.profileCompleted,
+  role:                user.role,
+  workExperience:      user.workExperience || [],
+  education:           user.education      || [],
+  // ── employer fields ──
+  companyName:         user.companyName    || "",
+  website:             user.website        || "",
+  industry:            user.industry       || "",
+  companySize:         user.companySize    || "",
+  founded:             user.founded        || "",
+  description:         user.description    || "",
+});
+
+// ── GET PROFILE ──────────────────────────────────────────────────────────────
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
-    
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.json({
-      success: true,
-      profile: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        location: user.location,
-        professionalTitle: user.professionalTitle,
-        professionalSummary: user.professionalSummary,
-        skills: user.skills,
-        resume: user.resume,
-        profileCompleted: user.profileCompleted,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error("GET PROFILE ERROR:", error);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ success: true, profile: buildProfile(user) });
+  } catch (err) {
     res.status(500).json({
       message: "Failed to fetch profile",
-      error: error.message,
+      error: err.message,
     });
   }
 };
 
-
-// ================= UPDATE PROFILE =================
+// ── UPDATE PROFILE ───────────────────────────────────────────────────────────
 exports.updateProfile = async (req, res) => {
   try {
     const {
-      username,
-      phone,
-      location,
-      professionalTitle,
-      professionalSummary,
-      skills,
+      username, phone, location,
+      professionalTitle, professionalSummary,
+      skills, workExperience, education,
+      companyName, website, industry,
+      companySize, founded, description,
     } = req.body;
 
     const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    // ── jobseeker fields ──
+    if (username !== undefined)            user.username            = username;
+    if (phone !== undefined)               user.phone               = phone;
+    if (location !== undefined)            user.location            = location;
+    if (professionalTitle !== undefined)   user.professionalTitle   = professionalTitle;
+    if (professionalSummary !== undefined) user.professionalSummary = professionalSummary;
+
+    if (skills !== undefined) {
+      user.skills = Array.isArray(skills)
+        ? skills
+        : String(skills).split(",").map((s) => s.trim()).filter(Boolean);
     }
 
-    // Update fields if provided
-    if (username) user.username = username;
-    if (phone) user.phone = phone;
-    if (location) user.location = location;
-    if (professionalTitle) user.professionalTitle = professionalTitle;
-    if (professionalSummary) user.professionalSummary = professionalSummary;
-    
-    // Handle skills (can be array or comma-separated string)
-    if (skills) {
-      if (Array.isArray(skills)) {
-        user.skills = skills;
-      } else if (typeof skills === 'string') {
-        user.skills = skills.split(",").map(s => s.trim()).filter(Boolean);
-      }
-    }
+    if (Array.isArray(workExperience)) user.workExperience = workExperience;
+    if (Array.isArray(education))      user.education      = education;
 
-    // Check if profile is completed - CONVERT TO BOOLEAN EXPLICITLY
-    const isCompleted = Boolean(
-      user.username &&
-      user.phone &&
-      user.location &&
-      user.professionalTitle &&
-      user.professionalSummary &&
-      user.skills.length > 0 &&
-      user.resume
-    );
+    // ── employer fields ──
+    if (companyName !== undefined)  user.companyName  = companyName;
+    if (website     !== undefined)  user.website      = website;
+    if (industry    !== undefined)  user.industry     = industry;
+    if (companySize !== undefined)  user.companySize  = companySize;
+    if (founded     !== undefined)  user.founded      = founded;
+    if (description !== undefined)  user.description  = description;
 
-    user.profileCompleted = isCompleted;
-
+    user.profileCompleted = checkCompleted(user);
     await user.save();
 
     res.json({
       success: true,
       message: "Profile updated successfully",
-      profile: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        location: user.location,
-        professionalTitle: user.professionalTitle,
-        professionalSummary: user.professionalSummary,
-        skills: user.skills,
-        resume: user.resume,
-        profileCompleted: user.profileCompleted,
-        role: user.role,
-      },
+      profile: buildProfile(user),
     });
-  } catch (error) {
-    console.error("UPDATE PROFILE ERROR:", error);
+  } catch (err) {
     res.status(500).json({
       message: "Failed to update profile",
-      error: error.message,
+      error: err.message,
     });
   }
 };
 
-// ================= UPLOAD RESUME =================
-// ================= UPLOAD RESUME =================
+// ── UPLOAD RESUME ────────────────────────────────────────────────────────────
 exports.uploadResume = async (req, res) => {
   try {
-    console.log("========== UPLOAD RESUME DEBUG ==========");
-    console.log("1. Request received");
-    console.log("2. User from token:", req.user);
-    console.log("3. File from multer:", req.file);
+    if (!req.file)
+      return res.status(400).json({ message: "Resume file is required" });
 
-    if (!req.file) {
-      console.log("ERROR: No file in request");
-      return res.status(400).json({
-        message: "Resume file is required",
-      });
-    }
-
-    console.log("5. Looking for user in database...");
     const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user) {
-      console.log("ERROR: User not found");
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    console.log("6. User found:", user.email);
-
-    // Save resume path
-    user.resume = req.file.path;
-    console.log("7. Resume path to save:", user.resume);
-
-    // Check if profile is completed - CONVERT TO BOOLEAN EXPLICITLY
-    const isCompleted = Boolean(
-      user.username &&
-      user.phone &&
-      user.location &&
-      user.professionalTitle &&
-      user.professionalSummary &&
-      user.skills.length > 0 &&
-      user.resume
-    );
-
-    user.profileCompleted = isCompleted; // Now it's a proper boolean
-    console.log("8. Profile completed:", isCompleted, typeof isCompleted);
-
-    console.log("9. Saving user to database...");
+    user.resume           = req.file.path;
+    user.profileCompleted = checkCompleted(user);
     await user.save();
 
-    console.log("10. SUCCESS! Resume uploaded");
-    console.log("=========================================");
-
     res.json({
-      success: true,
-      message: "Resume uploaded successfully",
-      resumePath: user.resume,
+      success:          true,
+      message:          "Resume uploaded successfully",
+      resumePath:       user.resume,
       profileCompleted: user.profileCompleted,
     });
-  } catch (error) {
-    console.error("========== UPLOAD RESUME ERROR ==========");
-    console.error("Error name:", error.name);
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
-    console.error("=========================================");
-    
+  } catch (err) {
     res.status(500).json({
       message: "Failed to upload resume",
-      error: error.message,
+      error: err.message,
     });
   }
 };

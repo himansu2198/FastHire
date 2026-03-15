@@ -1,444 +1,521 @@
-import React, { useState } from 'react';
-import { User, Mail, Phone, MapPin, Briefcase, GraduationCap, FileText, Upload, Save, X } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  Briefcase, FileText, Bell, CheckCircle,
+  Clock, XCircle, User, MapPin, GraduationCap,
+  AlertCircle, ArrowRight,
+} from "lucide-react";
+import { useProfile } from "../../context/ProfileContext";
+import { applicationApi } from "../../api/applicationApi";
+import { notificationApi } from "../../api/notificationApi";
+import { useAuth } from "../../context/AuthContext";
 
-const JobSeekerProfilePage = () => {
-  const [profile, setProfile] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    location: 'New York, NY',
-    title: 'Frontend Developer',
-    summary: 'Experienced Frontend Developer with 5+ years of experience building modern web applications using React, TypeScript, and modern JavaScript. Passionate about creating responsive, user-friendly interfaces.',
-    education: [
-      {
-        id: 1,
-        degree: 'Bachelor of Science in Computer Science',
-        school: 'University of Technology',
-        year: '2015-2019'
+// ── shared primitives ──────────────────────────────────────────────────────
+const Card = ({ children, className = "" }) => (
+  <div className={`bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden ${className}`}>
+    {children}
+  </div>
+);
+const CardHeader = ({ title }) => (
+  <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+    <h2 className="text-base font-semibold text-gray-800">{title}</h2>
+  </div>
+);
+const CardBody = ({ children, className = "" }) => (
+  <div className={`px-6 py-5 ${className}`}>{children}</div>
+);
+
+const statusIcon = (status) => {
+  switch (status?.toLowerCase()) {
+    case "accepted": return <CheckCircle className="h-4 w-4 text-green-500" />;
+    case "rejected": return <XCircle className="h-4 w-4 text-red-500" />;
+    default:         return <Clock className="h-4 w-4 text-yellow-500" />;
+  }
+};
+
+const statusBadge = (status) => {
+  switch (status?.toLowerCase()) {
+    case "accepted": return "bg-green-50 text-green-700 border border-green-200";
+    case "rejected": return "bg-red-50 text-red-700 border border-red-200";
+    default:         return "bg-yellow-50 text-yellow-700 border border-yellow-200";
+  }
+};
+
+const EmptyState = ({ text, link, linkText }) => (
+  <div className="text-center py-4">
+    <p className="text-sm text-gray-400">{text}</p>
+    <Link to={link}
+      className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600
+                 font-medium hover:underline">
+      {linkText} <ArrowRight className="h-3 w-3" />
+    </Link>
+  </div>
+);
+
+// ────────────────────────────────────────────────────────────────────────────
+const JobSeekerDashboard = () => {
+  const { user } = useAuth();
+  const {
+    profile,
+    loadingProfile,
+    fetchProfile,
+    completionSections,
+    completionPct,
+  } = useProfile();
+
+  const [applications,  setApplications]  = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingRest,   setLoadingRest]   = useState(true);
+
+  useEffect(() => {
+    // always fetch fresh profile when dashboard mounts
+    fetchProfile();
+
+    const loadRest = async () => {
+      try {
+        const [appRes, notifRes] = await Promise.all([
+          applicationApi.getMyApplications().catch(() => ({ applications: [] })),
+          notificationApi.getNotifications().catch(() => ({ notifications: [] })),
+        ]);
+        setApplications(
+          appRes.applications  || appRes.data?.applications  || []
+        );
+        setNotifications(
+          notifRes.notifications || notifRes.data?.notifications || []
+        );
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+      } finally {
+        setLoadingRest(false);
       }
-    ],
-    experience: [
-      {
-        id: 1,
-        position: 'Senior Frontend Developer',
-        company: 'Tech Innovations Inc.',
-        period: '2021-Present',
-        description: 'Lead frontend development for multiple projects using React and TypeScript.'
-      },
-      {
-        id: 2,
-        position: 'Frontend Developer',
-        company: 'Digital Solutions',
-        period: '2019-2021',
-        description: 'Developed responsive web applications and collaborated with UX designers.'
-      }
-    ],
-    skills: ['React', 'TypeScript', 'JavaScript', 'HTML/CSS', 'Redux', 'Next.js', 'Git', 'REST APIs'],
-    resume: null
-  });
+    };
+    loadRest();
+  }, [fetchProfile]);
 
-  const [editMode, setEditMode] = useState(false);
-  const [resumeFile, setResumeFile] = useState(null);
-  const [newSkill, setNewSkill] = useState('');
+  const loading = loadingProfile || loadingRest;
 
-  const handleInputChange = (field, value) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2
+                          border-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-500 text-sm">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setResumeFile(file);
-      setProfile(prev => ({ ...prev, resume: file.name }));
-    }
-  };
+  const filledCount = Object.values(completionSections).filter(Boolean).length;
+  const totalCount  = Object.keys(completionSections).length;
+  const unread      = notifications.filter((n) => !n.isRead).length;
 
-  const addSkill = () => {
-    if (newSkill.trim() && !profile.skills.includes(newSkill.trim())) {
-      setProfile(prev => ({
-        ...prev,
-        skills: [...prev.skills, newSkill.trim()]
-      }));
-      setNewSkill('');
-    }
-  };
-
-  const removeSkill = (skillToRemove) => {
-    setProfile(prev => ({
-      ...prev,
-      skills: prev.skills.filter(skill => skill !== skillToRemove)
-    }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Save profile logic here
-    setEditMode(false);
+  const barColor = (pct) => {
+    if (pct === 100) return "bg-green-500";
+    if (pct > 0)     return "bg-yellow-400";
+    return "bg-gray-200";
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container-custom">
+    <div className="min-h-screen bg-gray-50 py-10">
+      <div className="container mx-auto px-4 max-w-6xl">
+
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-            <p className="text-gray-600 mt-2">Manage your personal information and resume</p>
-          </div>
-          <div className="flex gap-3">
-            {editMode ? (
-              <>
-                <button
-                  onClick={() => setEditMode(false)}
-                  className="btn-outline"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="btn-primary"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setEditMode(true)}
-                className="btn-primary"
-              >
-                Edit Profile
-              </button>
-            )}
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {profile?.username || user?.username || "there"} 👋
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm">
+            {profile?.professionalTitle
+              ? `${profile.professionalTitle}${
+                  profile.location ? " · " + profile.location : ""}`
+              : "Complete your profile to start applying for jobs"}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Basic Info */}
-          <div className="lg:col-span-2">
-            <div className="card mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <User className="h-4 w-4 inline mr-2" />
-                    Full Name
-                  </label>
-                  {editMode ? (
-                    <input
-                      type="text"
-                      value={profile.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="input-primary"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.name}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Mail className="h-4 w-4 inline mr-2" />
-                    Email Address
-                  </label>
-                  {editMode ? (
-                    <input
-                      type="email"
-                      value={profile.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="input-primary"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.email}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Phone className="h-4 w-4 inline mr-2" />
-                    Phone Number
-                  </label>
-                  {editMode ? (
-                    <input
-                      type="tel"
-                      value={profile.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="input-primary"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.phone}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <MapPin className="h-4 w-4 inline mr-2" />
-                    Location
-                  </label>
-                  {editMode ? (
-                    <input
-                      type="text"
-                      value={profile.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                      className="input-primary"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.location}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Briefcase className="h-4 w-4 inline mr-2" />
-                  Professional Title
-                </label>
-                {editMode ? (
-                  <input
-                    type="text"
-                    value={profile.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="input-primary"
-                  />
-                ) : (
-                  <p className="text-gray-900">{profile.title}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Professional Summary
-                </label>
-                {editMode ? (
-                  <textarea
-                    value={profile.summary}
-                    onChange={(e) => handleInputChange('summary', e.target.value)}
-                    rows="4"
-                    className="input-primary"
-                  />
-                ) : (
-                  <p className="text-gray-700 whitespace-pre-line">{profile.summary}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Skills */}
-            <div className="card mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Skills</h2>
-              
-              <div className="flex flex-wrap gap-2 mb-6">
-                {profile.skills.map((skill, index) => (
-                  <span 
-                    key={index} 
-                    className="inline-flex items-center gap-1 px-3 py-2 bg-primary-100 text-primary-800 rounded-full text-sm"
-                  >
-                    {skill}
-                    {editMode && (
-                      <button 
-                        onClick={() => removeSkill(skill)}
-                        className="text-primary-800 hover:text-primary-900"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-
-              {editMode && (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addSkill()}
-                    placeholder="Add a skill"
-                    className="flex-1 input-primary"
-                  />
-                  <button
-                    onClick={addSkill}
-                    className="btn-primary"
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Experience */}
-            <div className="card mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Work Experience</h2>
-              
-              <div className="space-y-6">
-                {profile.experience.map((exp) => (
-                  <div key={exp.id} className="border-l-4 border-primary-500 pl-4">
-                    <h3 className="font-semibold text-gray-900">{exp.position}</h3>
-                    <p className="text-gray-600">{exp.company}</p>
-                    <p className="text-sm text-gray-500 mb-2">{exp.period}</p>
-                    <p className="text-gray-700">{exp.description}</p>
-                  </div>
-                ))}
-              </div>
-
-              {editMode && (
-                <button className="mt-4 text-primary-600 hover:text-primary-700">
-                  + Add Experience
-                </button>
-              )}
-            </div>
-
-            {/* Education */}
-            <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Education</h2>
-              
-              <div className="space-y-6">
-                {profile.education.map((edu) => (
-                  <div key={edu.id} className="flex items-start gap-4">
-                    <GraduationCap className="h-6 w-6 text-primary-600 mt-1" />
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{edu.degree}</h3>
-                      <p className="text-gray-600">{edu.school}</p>
-                      <p className="text-sm text-gray-500">{edu.year}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {editMode && (
-                <button className="mt-4 text-primary-600 hover:text-primary-700">
-                  + Add Education
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column - Resume & Stats */}
-          <div className="lg:col-span-1">
-            {/* Resume Upload */}
-            <div className="card mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Resume</h2>
-              
-              <div className="text-center border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-primary-400 transition-colors">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                
-                {profile.resume ? (
-                  <>
-                    <p className="font-medium text-gray-900 mb-2">{profile.resume}</p>
-                    <div className="flex gap-2 justify-center">
-                      <button className="text-sm text-primary-600 hover:text-primary-700">
-                        Download
-                      </button>
-                      <span className="text-gray-400">|</span>
-                      <button className="text-sm text-red-600 hover:text-red-700">
-                        Remove
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-600 mb-4">Upload your resume (PDF, DOC, DOCX)</p>
-                    <label className="btn-primary cursor-pointer">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Resume
-                      <input
-                        type="file"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                        accept=".pdf,.doc,.docx"
-                      />
-                    </label>
-                  </>
-                )}
-              </div>
-              
-              <p className="text-sm text-gray-500 mt-4">
-                A complete resume increases your chances of getting hired by 40%.
+        {/* Incomplete alert */}
+        {completionPct < 100 && (
+          <div className="mb-6 flex items-start gap-3 bg-yellow-50 border
+                          border-yellow-200 rounded-2xl px-5 py-4">
+            <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-yellow-800">
+                Your profile is {completionPct}% complete
+              </p>
+              <p className="text-xs text-yellow-700 mt-0.5">
+                Complete your profile to unlock job applications.
               </p>
             </div>
+            <Link to="/jobseeker/profile"
+              className="text-xs font-semibold text-yellow-800
+                         underline whitespace-nowrap">
+              Complete now →
+            </Link>
+          </div>
+        )}
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[
+            {
+              label: "Applications",
+              value: applications.length,
+              icon:  <Briefcase className="h-5 w-5 text-blue-600" />,
+              bg:    "bg-blue-50",
+            },
+            {
+              label: "Under Review",
+              value: applications.filter((a) => a.status === "pending").length,
+              icon:  <Clock className="h-5 w-5 text-yellow-600" />,
+              bg:    "bg-yellow-50",
+            },
+            {
+              label: "Accepted",
+              value: applications.filter((a) => a.status === "accepted").length,
+              icon:  <CheckCircle className="h-5 w-5 text-green-600" />,
+              bg:    "bg-green-50",
+            },
+            {
+              label: "Notifications",
+              value: unread,
+              icon:  <Bell className="h-5 w-5 text-purple-600" />,
+              bg:    "bg-purple-50",
+            },
+          ].map(({ label, value, icon, bg }) => (
+            <Card key={label}>
+              <CardBody className="flex items-center gap-4">
+                <div className={`${bg} p-2.5 rounded-xl`}>{icon}</div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{value}</p>
+                  <p className="text-xs text-gray-500">{label}</p>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+
+        {/* Main grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+          {/* ══ LEFT ══ */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Skills */}
+            <Card>
+              <CardHeader title="Skills" />
+              <CardBody>
+                {profile?.skills?.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {profile.skills.map((s, i) => (
+                      <span key={i}
+                        className="px-3 py-1 bg-blue-50 text-blue-700 text-xs
+                                   font-semibold rounded-full border border-blue-100">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    text="No skills added yet"
+                    link="/jobseeker/profile"
+                    linkText="Add skills"
+                  />
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Work Experience */}
+            <Card>
+              <CardHeader title="Work Experience" />
+              <CardBody>
+                {profile?.workExperience?.length > 0 ? (
+                  <div className="space-y-5">
+                    {profile.workExperience.map((exp, i) => (
+                      <div key={i} className={`pb-5 ${
+                        i < profile.workExperience.length - 1
+                          ? "border-b border-gray-100" : ""}`}>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {exp.jobTitle}
+                            </p>
+                            <p className="text-sm text-blue-600 font-medium mt-0.5">
+                              {exp.company}
+                            </p>
+                            {exp.location && (
+                              <p className="text-xs text-gray-400 flex items-center
+                                            gap-1 mt-0.5">
+                                <MapPin className="h-3 w-3" />{exp.location}
+                              </p>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
+                            {exp.startDate} — {exp.current ? "Present" : exp.endDate}
+                          </span>
+                        </div>
+                        {exp.description && (
+                          <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                            {exp.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    text="No work experience added yet"
+                    link="/jobseeker/profile"
+                    linkText="Add experience"
+                  />
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Education */}
+            <Card>
+              <CardHeader title="Education" />
+              <CardBody>
+                {profile?.education?.length > 0 ? (
+                  <div className="space-y-5">
+                    {profile.education.map((edu, i) => (
+                      <div key={i} className={`flex items-start gap-3 pb-5 ${
+                        i < profile.education.length - 1
+                          ? "border-b border-gray-100" : ""}`}>
+                        <div className="bg-blue-50 p-2 rounded-xl flex-shrink-0">
+                          <GraduationCap className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {edu.degree}
+                                {edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}
+                              </p>
+                              <p className="text-sm text-blue-600 font-medium mt-0.5">
+                                {edu.institution}
+                              </p>
+                              {edu.grade && (
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  Grade: {edu.grade}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-400
+                                            whitespace-nowrap ml-4">
+                              {edu.startDate} — {edu.endDate || "Present"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    text="No education added yet"
+                    link="/jobseeker/profile"
+                    linkText="Add education"
+                  />
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Recent Applications */}
+            <Card>
+              <div className="px-6 pt-6 pb-4 border-b border-gray-100
+                              flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-800">
+                  Recent Applications
+                </h2>
+                <Link to="/jobseeker/applications"
+                  className="text-xs text-blue-600 font-medium hover:underline
+                             flex items-center gap-1">
+                  View all <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <CardBody>
+                {applications.length > 0 ? (
+                  <div className="space-y-3">
+                    {applications.slice(0, 5).map((app) => (
+                      <div key={app._id}
+                        className="flex items-center justify-between py-2
+                                   border-b border-gray-50 last:border-0">
+                        <div className="flex items-center gap-3">
+                          {statusIcon(app.status)}
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {app.job?.title || "Job"}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {app.job?.companyName || ""}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`text-xs px-2.5 py-1 rounded-full
+                                         font-medium capitalize
+                                         ${statusBadge(app.status)}`}>
+                          {app.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    text="No applications yet"
+                    link="/jobs"
+                    linkText="Browse jobs"
+                  />
+                )}
+              </CardBody>
+            </Card>
+          </div>
+
+          {/* ══ RIGHT ══ */}
+          <div className="lg:col-span-1 space-y-6">
 
             {/* Profile Completion */}
-            <div className="card mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Completion</h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Basic Information</span>
-                    <span className="text-green-600">100%</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 w-full"></div>
-                  </div>
+            <Card>
+              <CardHeader title="Profile Completion" />
+              <CardBody>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-3xl font-bold text-blue-600">
+                    {completionPct}%
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {filledCount}/{totalCount} sections
+                  </span>
                 </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Skills</span>
-                    <span className="text-green-600">90%</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 w-11/12"></div>
-                  </div>
+                <div className="w-full bg-gray-100 rounded-full h-2 mb-5">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-700
+                                ${barColor(completionPct)}`}
+                    style={{ width: `${completionPct}%` }}
+                  />
                 </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Experience</span>
-                    <span className="text-yellow-600">75%</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-yellow-500 w-3/4"></div>
-                  </div>
+                <div className="space-y-3">
+                  {Object.entries(completionSections).map(([label, done]) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${
+                          done ? "bg-green-500" : "bg-gray-300"}`} />
+                        <span className="text-sm text-gray-700">{label}</span>
+                      </div>
+                      <span className={`text-xs font-bold ${
+                        done ? "text-green-600" : "text-red-400"}`}>
+                        {done ? "✓ Done" : "Missing"}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Resume</span>
-                    <span className="text-red-600">40%</span>
+                {completionPct < 100 && (
+                  <Link to="/jobseeker/profile"
+                    className="mt-5 w-full inline-flex items-center justify-center
+                               gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm
+                               font-medium py-2.5 rounded-xl transition-colors">
+                    <User className="h-4 w-4" />Complete Profile
+                  </Link>
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Resume */}
+            <Card>
+              <CardHeader title="Resume" />
+              <CardBody>
+                {profile?.resume ? (
+                  <div className="flex items-start gap-3 bg-green-50 border
+                                  border-green-200 rounded-xl px-4 py-3">
+                    <FileText className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-green-800">
+                        Resume uploaded
+                      </p>
+                      <p className="text-xs text-green-600 mt-0.5">
+                        Ready to send with applications
+                      </p>
+                    </div>
                   </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-red-500 w-2/5"></div>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-3 bg-red-50 border
+                                    border-red-200 rounded-xl px-4 py-3 mb-4">
+                      <AlertCircle className="h-5 w-5 text-red-500 mt-0.5
+                                              flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-red-800">
+                          No resume uploaded
+                        </p>
+                        <p className="text-xs text-red-600 mt-0.5">
+                          Required to apply for jobs
+                        </p>
+                      </div>
+                    </div>
+                    <Link to="/jobseeker/profile"
+                      className="w-full inline-flex items-center justify-center gap-2
+                                 bg-blue-600 hover:bg-blue-700 text-white text-sm
+                                 font-medium py-2.5 rounded-xl transition-colors">
+                      <FileText className="h-4 w-4" />Upload Resume
+                    </Link>
+                  </>
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Notifications */}
+            <Card>
+              <CardHeader
+                title={`Notifications${unread > 0 ? ` (${unread} new)` : ""}`}
+              />
+              <CardBody>
+                {notifications.length > 0 ? (
+                  <div className="space-y-2">
+                    {notifications.slice(0, 5).map((n, i) => (
+                      <div key={i}
+                        className={`text-xs px-3 py-2.5 rounded-lg ${
+                          n.isRead
+                            ? "bg-gray-50 text-gray-600"
+                            : "bg-blue-50 text-blue-800 font-medium"}`}>
+                        {n.message}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 p-3 bg-primary-50 rounded-lg">
-                <p className="text-sm text-primary-800">
-                  Complete your profile to increase visibility to employers.
-                </p>
-              </div>
-            </div>
+                ) : (
+                  <p className="text-sm text-gray-400 text-center py-2">
+                    No notifications yet
+                  </p>
+                )}
+              </CardBody>
+            </Card>
 
             {/* Privacy Settings */}
-            <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Privacy Settings</h2>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Profile Visibility</p>
-                    <p className="text-sm text-gray-600">Who can see your profile</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                  </label>
+            <Card>
+              <CardHeader title="Privacy Settings" />
+              <CardBody>
+                <div className="space-y-4">
+                  {[
+                    { label: "Profile Visibility", sub: "Visible to employers" },
+                    { label: "Job Alerts",          sub: "Email notifications"  },
+                  ].map(({ label, sub }) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{label}</p>
+                        <p className="text-xs text-gray-400">{sub}</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <div className="w-10 h-6 bg-gray-200 rounded-full peer
+                                        peer-checked:bg-blue-600
+                                        after:content-[''] after:absolute after:top-[2px]
+                                        after:left-[2px] after:bg-white after:border
+                                        after:rounded-full after:h-5 after:w-5
+                                        after:transition-all
+                                        peer-checked:after:translate-x-4" />
+                      </label>
+                    </div>
+                  ))}
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Job Alerts</p>
-                    <p className="text-sm text-gray-600">Receive email notifications</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
+              </CardBody>
+            </Card>
+
           </div>
         </div>
       </div>
@@ -446,4 +523,4 @@ const JobSeekerProfilePage = () => {
   );
 };
 
-export default JobSeekerProfilePage;
+export default JobSeekerDashboard;

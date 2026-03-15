@@ -3,14 +3,22 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext(null);
-
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user")) || null
-  );
-  const [token, setToken] = useState(localStorage.getItem("token") || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem("token") || null;
+  });
+
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -33,13 +41,10 @@ export const AuthProvider = ({ children }) => {
       "https://job-listing-portal-dpov.onrender.com/api/auth/login",
       { email, password }
     );
-
     setToken(data.token);
     setUser(data.user);
-
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
-
     if (data.user.role === "employer") {
       navigate("/employer/dashboard");
     } else {
@@ -53,13 +58,10 @@ export const AuthProvider = ({ children }) => {
       "https://job-listing-portal-dpov.onrender.com/api/auth/register",
       formData
     );
-
     setToken(data.token);
     setUser(data.user);
-
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
-
     if (data.user.role === "employer") {
       navigate("/employer/dashboard");
     } else {
@@ -92,5 +94,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-
