@@ -5,9 +5,7 @@ const ProfileContext = createContext(null);
 
 export const useProfile = () => {
   const context = useContext(ProfileContext);
-  if (!context) {
-    throw new Error("useProfile must be used inside ProfileProvider");
-  }
+  if (!context) throw new Error("useProfile must be used inside ProfileProvider");
   return context;
 };
 
@@ -15,36 +13,28 @@ export const ProfileProvider = ({ children }) => {
   const [profile,        setProfile]        = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
-const fetchProfile = useCallback(async () => {
-  setLoadingProfile(true);
-  try {
-    const res = await profileApi.getProfile();
-    console.log("RAW RES:", res);
-    console.log("RES TYPE:", typeof res);
-    console.log("RES KEYS:", res ? Object.keys(res) : "null/undefined");
-
-    const p = res?.profile || res;
-    setProfile({ ...p });
-    return p;
-  } catch (err) {
-    console.error("fetchProfile error:", err);
-    return null;
-  } finally {
-    setLoadingProfile(false);
-  }
-}, []);
+  const fetchProfile = useCallback(async () => {
+    setLoadingProfile(true);
+    try {
+      const res = await profileApi.getProfile();
+      const p = res?.profile ?? res;
+      setProfile({ ...p });
+      return p;
+    } catch (err) {
+      console.error("fetchProfile error:", err);
+      return null;
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, []);
 
   const updateProfile = useCallback(async (formData) => {
     try {
       const res = await profileApi.updateProfile(formData);
-
-      // backend returns { success: true, profile: {...} }
-      const p = res?.profile || res;
-
-      if (p && typeof p === "object") {
+      const p = res?.profile ?? res;
+      if (p && typeof p === "object" && p.email) {
         setProfile({ ...p });
       } else {
-        // fallback re-fetch
         await fetchProfile();
       }
       return res;
@@ -64,7 +54,6 @@ const fetchProfile = useCallback(async () => {
     }
   }, [fetchProfile]);
 
-  // ── jobseeker completion ───────────────────────────────────────────────────
   const jobSeekerCompletionSections = {
     "Basic Information": !!(
       profile?.username &&
@@ -83,7 +72,6 @@ const fetchProfile = useCallback(async () => {
       Object.keys(jobSeekerCompletionSections).length) * 100
   );
 
-  // ── employer completion ────────────────────────────────────────────────────
   const employerCompletionSections = {
     "Company Name": !!(profile?.companyName),
     "Contact Info": !!(profile?.phone && profile?.location),
@@ -97,33 +85,18 @@ const fetchProfile = useCallback(async () => {
       Object.keys(employerCompletionSections).length) * 100
   );
 
-  const isEmployer = profile?.role === "employer";
-
-  const completionSections = isEmployer
-    ? employerCompletionSections
-    : jobSeekerCompletionSections;
-
-  const completionPct = isEmployer
-    ? employerCompletionPct
-    : jobSeekerCompletionPct;
+  const isEmployer        = profile?.role === "employer";
+  const completionSections = isEmployer ? employerCompletionSections : jobSeekerCompletionSections;
+  const completionPct      = isEmployer ? employerCompletionPct      : jobSeekerCompletionPct;
 
   return (
-    <ProfileContext.Provider
-      value={{
-        profile,
-        setProfile,
-        loadingProfile,
-        fetchProfile,
-        updateProfile,
-        uploadResume,
-        completionSections,
-        completionPct,
-        jobSeekerCompletionSections,
-        jobSeekerCompletionPct,
-        employerCompletionSections,
-        employerCompletionPct,
-      }}
-    >
+    <ProfileContext.Provider value={{
+      profile, setProfile, loadingProfile,
+      fetchProfile, updateProfile, uploadResume,
+      completionSections, completionPct,
+      jobSeekerCompletionSections, jobSeekerCompletionPct,
+      employerCompletionSections,  employerCompletionPct,
+    }}>
       {children}
     </ProfileContext.Provider>
   );
