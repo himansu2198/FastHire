@@ -17,82 +17,129 @@ I will add this give me some time.
 
 📄 Job Details
 
-📊 Job Seeker Dashboard
+# 📊 Job Seeker Dashboard & Features
 
-👤 Profile Page
+---
 
-✨ Features
-🔐 Authentication & Authorization
-User registration & login
-JWT-based authentication (backend integration in progress)
-Role-based access:
-👤 Job Seeker
-🏢 Employer
-Protected routes
-👤 Profile Management
-Job seeker profile:
-Skills
-Education
-Work Experience
-Bio/About
-Resume upload functionality
-Dynamic profile completion system
-Real-time dashboard updates
-🔎 Job Search & Listings
-Browse all jobs
-Search by:
-Keywords
-Location
-Category
-Clean and responsive job cards
-Human-readable timestamps (e.g., “2 days ago”)
-📄 Job Applications
-Apply for jobs
-Track application status:
-Applied
-Under Review
-Accepted
-Job seeker application dashboard
-Employer-side application management UI
-📊 Dashboards
-👤 Job Seeker Dashboard
-Profile completion tracking (dynamic %)
-Applications overview
-Skills & experience summary
-Resume status
-Smart UI with animations
-🏢 Employer Dashboard
-Job posting stats
-Applicant insights
-Hiring workflow overview
-🎨 UI / UX
-Modern responsive design using Tailwind CSS
-Clean SaaS-style layout (not template-based)
-Micro-interactions:
-Hover effects
-Button animations
-Progress animations
-Reusable component architecture
-Mobile-friendly design
-🛠️ Tech Stack
-🚀 Frontend
-React.js (Vite)
-React Router
-Tailwind CSS
-Context API
-Axios
-⚙️ Backend
-Node.js
-Express.js
-MongoDB (in progress / integrated)
-Mongoose
-JWT Authentication
-🧰 Tools
-Git & GitHub
-Postman
-VS Code
-📁 Project Structure
-📦 Frontend
+## 👤 Job Seeker Dashboard
+- Profile completion tracking (dynamic %)
+- Applications overview
+- Skills & experience summary
+- Resume status
+- Real-time updates after profile changes
+
+---
+
+## 👤 Profile Page
+- Basic Information (Name, Email, Phone, Location)
+- Skills (tags-based UI)
+- Work Experience section
+- Education section
+- Resume upload & replace
+- Editable profile with live updates
+
+---
+
+## ✨ Features
+
+### 🔐 Authentication & Authorization
+- User registration & login
+- JWT-based authentication *(backend integration in progress)*
+- Role-based access:
+  - 👤 Job Seeker
+  - 🏢 Employer
+- Protected routes
+
+---
+
+### 👤 Profile Management
+- Job seeker profile:
+  - Skills
+  - Education
+  - Work Experience
+  - Bio/About
+- Resume upload functionality
+- Dynamic profile completion system
+- Real-time dashboard updates
+
+---
+
+### 🔎 Job Search & Listings
+- Browse all jobs
+- Search by:
+  - Keywords
+  - Location
+  - Category
+- Clean and responsive job cards
+- Human-readable timestamps *(e.g., "2 days ago")*
+
+---
+
+### 📄 Job Applications
+- Apply for jobs
+- Track application status:
+  - Applied
+  - Under Review
+  - Accepted
+- Job seeker application dashboard
+- Employer-side application management UI
+
+---
+
+### 📊 Dashboards
+
+#### 👤 Job Seeker Dashboard
+- Profile completion tracking (dynamic %)
+- Applications overview
+- Skills & experience summary
+- Resume status
+- Smart UI with animations
+
+#### 🏢 Employer Dashboard
+- Job posting stats
+- Applicant insights
+- Hiring workflow overview
+
+---
+
+### 🎨 UI / UX
+- Modern responsive design using Tailwind CSS
+- Clean SaaS-style layout (not template-based)
+- Micro-interactions:
+  - Hover effects
+  - Button animations
+  - Progress animations
+- Reusable component architecture
+- Mobile-friendly design
+
+---
+
+## 🛠️ Tech Stack
+
+### 🚀 Frontend
+- React.js (Vite)
+- React Router
+- Tailwind CSS
+- Context API
+- Axios
+
+### ⚙️ Backend
+- Node.js
+- Express.js
+- MongoDB *(in progress / integrated)*
+- Mongoose
+- JWT Authentication
+
+### 🧰 Tools
+- Git & GitHub
+- Postman
+- VS Code
+
+---
+
+## 📁 Project Structure
+
+### 📦 Frontend
 frontend/src/
 │
 ├── api/
