@@ -140,35 +140,104 @@ I will add this give me some time.
 ## 📁 Project Structure
 
 ### 📦 Frontend
-frontend/src/
-│
+
+
+frontend/
+└── src/
 ├── api/
+│ ├── authApi.js
+│ ├── jobApi.js
+│ ├── profileApi.js
+│
 ├── components/
-│   ├── common/
-│   ├── dashboard/
-│   ├── profile/
-│   ├── jobs/
+│ ├── common/
+│ │ ├── Navbar.jsx
+│ │ ├── Footer.jsx
+│ │ ├── Loader.jsx
+│ │
+│ ├── dashboard/
+│ │ ├── DashboardHeader.jsx
+│ │ ├── StatsCard.jsx
+│ │ ├── ProfileCompletionCard.jsx
+│ │
+│ ├── profile/
+│ │ ├── ProfileForm.jsx
+│ │ ├── SkillsSection.jsx
+│ │ ├── ExperienceSection.jsx
+│ │ ├── ResumeUpload.jsx
+│ │
+│ ├── jobs/
+│ │ ├── JobCard.jsx
+│ │ ├── JobList.jsx
+│ │ ├── JobFilterBar.jsx
 │
 ├── context/
+│ ├── AuthContext.jsx
+│ ├── ProfileContext.jsx
+│
 ├── hooks/
+│ ├── useAuth.js
+│ ├── useProfile.js
+│
 ├── pages/
-│   ├── public/
-│   ├── jobseeker/
+│ ├── public/
+│ │ ├── HomePage.jsx
+│ │ ├── JobListPage.jsx
+│ │ ├── JobDetailPage.jsx
+│ │ ├── LoginPage.jsx
+│ │ ├── RegisterPage.jsx
+│ │
+│ ├── jobseeker/
+│ │ ├── Dashboard.jsx
+│ │ ├── ProfilePage.jsx
+│ │ ├── EditProfilePage.jsx
 │
 ├── utils/
+│ ├── calculateProfileCompletion.js
+│ ├── formatDate.js
+│
 ├── styles/
+│ ├── globals.css
+│
 ├── App.jsx
 ├── main.jsx
-📦 Backend
-backend/src/
-│
+
+
+---
+
+### 📦 Backend
+
+
+backend/
+└── src/
 ├── controllers/
+│ ├── authController.js
+│ ├── jobController.js
+│ ├── profileController.js
+│
 ├── models/
+│ ├── User.js
+│ ├── Job.js
+│ ├── JobSeekerProfile.js
+│
 ├── routes/
+│ ├── authRoutes.js
+│ ├── jobRoutes.js
+│ ├── profileRoutes.js
+│
 ├── middleware/
+│ ├── authMiddleware.js
+│
 ├── utils/
+│ ├── calculateCompletion.js
+│
 ├── config/
-├── server.js
+│ ├── db.js
+│
+└── server.js
+
+---
+
 🔥 Key Features Highlight
 ✅ Dynamic Profile Completion System
 Calculates completion % based on real user data
@@ -183,6 +252,9 @@ Secure route protection
 Modular folder structure
 Reusable components
 Clean separation of concerns
+
+--- 
+
 ⚡ Installation & Setup
 1️⃣ Clone the repository
 git clone https://github.com/your-username/fasthire.git
@@ -208,13 +280,16 @@ JWT_SECRET=your_secret_key
 🤖 AI-based job recommendations
 📈 Advanced analytics dashboard
 
+---
 🤝 Contributing
 
 Contributions are welcome! Feel free to fork the repo and submit a PR.
 
+---
 📬 Contact
 📧 Email: bhimansusekhar2004@gmail.com
 💼 LinkedIn: www.linkedin.com/in/himansu-sekhar-behura-816133256
+---
 ⭐ Acknowledgment
 
 Inspired by real-world platforms like:
@@ -222,7 +297,7 @@ Inspired by real-world platforms like:
 LinkedIn
 Internshala
 Indeed
-
+---
 📌 Final Note
 
 This project demonstrates:
