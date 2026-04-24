@@ -1,99 +1,187 @@
-**🚀 Job Listing Portal**
+🚀 FastHire — Job Portal Platform
 
-A full-stack Job Listing Portal designed to connect job seekers and employers through a modern, role-based web application.
-The project focuses on clean UI, scalable architecture and real-world hiring workflows.
+A full-stack Job Portal Web Application that connects job seekers with employers through a modern, scalable, and role-based system.
 
-**✨ Features**
+Built with real-world hiring workflows, this project focuses on clean UI/UX, modular architecture, and dynamic data-driven dashboards.
+
+🌐 Live Demo
+
+I will add this give me some time.
+
+📸 Screenshots
+🏠 Homepage
+
+🔐 Login / Register
+
+💼 Job Listings
+
+📄 Job Details
+
+📊 Job Seeker Dashboard
+
+👤 Profile Page
+
+✨ Features
 🔐 Authentication & Authorization
-
 User registration & login
-
 JWT-based authentication (backend integration in progress)
-
-Role-based access (Job Seeker / Employer)
-
+Role-based access:
+👤 Job Seeker
+🏢 Employer
 Protected routes
-
-**👤 Profile Management**
-
-Job seeker profile (skills, education, experience)
-
-Employer/company profile
-
-Resume upload UI
-
-Profile edit & update functionality (frontend complete)
-
-**🔎 Job Search & Listings**
-
+👤 Profile Management
+Job seeker profile:
+Skills
+Education
+Work Experience
+Bio/About
+Resume upload functionality
+Dynamic profile completion system
+Real-time dashboard updates
+🔎 Job Search & Listings
 Browse all jobs
-
-Filter by category, location, and keywords
-
-Job detail pages
-
+Search by:
+Keywords
+Location
+Category
 Clean and responsive job cards
-
-**📄 Job Applications**
-
+Human-readable timestamps (e.g., “2 days ago”)
+📄 Job Applications
 Apply for jobs
-
-Application status tracking
-
-Job seeker applications dashboard
-
-Employer application management UI
-
-**📊 Dashboards**
-
-Employer dashboard with statistics
-
-Job seeker dashboard (UI in progress)
-
-Recent jobs and applications overview
-
-**🎨 UI / UX**
-Modern responsive UI using Tailwind CSS
-
-Gradient hero sections
-
-Reusable components
-
+Track application status:
+Applied
+Under Review
+Accepted
+Job seeker application dashboard
+Employer-side application management UI
+📊 Dashboards
+👤 Job Seeker Dashboard
+Profile completion tracking (dynamic %)
+Applications overview
+Skills & experience summary
+Resume status
+Smart UI with animations
+🏢 Employer Dashboard
+Job posting stats
+Applicant insights
+Hiring workflow overview
+🎨 UI / UX
+Modern responsive design using Tailwind CSS
+Clean SaaS-style layout (not template-based)
+Micro-interactions:
+Hover effects
+Button animations
+Progress animations
+Reusable component architecture
 Mobile-friendly design
-
-**🛠️ Tech Stack**
-Frontend
-
-React.js
-
+🛠️ Tech Stack
+🚀 Frontend
+React.js (Vite)
 React Router
-
 Tailwind CSS
-
 Context API
-
 Axios
-
-Vite
-
-Backend
-
+⚙️ Backend
 Node.js
-
 Express.js
-
-MongoDB (planned / in progress)
-
-JWT Authentication
-
+MongoDB (in progress / integrated)
 Mongoose
-
-Tools
-
+JWT Authentication
+🧰 Tools
 Git & GitHub
-
 Postman
-
 VS Code
+📁 Project Structure
+📦 Frontend
+frontend/src/
+│
+├── api/
+├── components/
+│   ├── common/
+│   ├── dashboard/
+│   ├── profile/
+│   ├── jobs/
+│
+├── context/
+├── hooks/
+├── pages/
+│   ├── public/
+│   ├── jobseeker/
+│
+├── utils/
+├── styles/
+├── App.jsx
+├── main.jsx
+📦 Backend
+backend/src/
+│
+├── controllers/
+├── models/
+├── routes/
+├── middleware/
+├── utils/
+├── config/
+├── server.js
+🔥 Key Features Highlight
+✅ Dynamic Profile Completion System
+Calculates completion % based on real user data
+Updates instantly on profile changes
+Drives better user engagement
+✅ Role-Based System
+Separate flows for:
+Job Seekers
+Employers
+Secure route protection
+✅ Scalable Architecture
+Modular folder structure
+Reusable components
+Clean separation of concerns
+⚡ Installation & Setup
+1️⃣ Clone the repository
+git clone https://github.com/your-username/fasthire.git
+cd fasthire
+2️⃣ Setup Frontend
+cd frontend
+npm install
+npm run dev
+3️⃣ Setup Backend
+cd backend
+npm install
+npm run server
+4️⃣ Environment Variables
+
+Create .env in backend:
+
+PORT=5000
+MONGO_URI=your_mongodb_url
+JWT_SECRET=your_secret_key
+🚧 Future Improvements
+🔔 Real-time notifications
+💬 Chat between employer & candidate
+🤖 AI-based job recommendations
+📈 Advanced analytics dashboard
+
+🤝 Contributing
+
+Contributions are welcome! Feel free to fork the repo and submit a PR.
+
+📬 Contact
+📧 Email: bhimansusekhar2004@gmail.com
+💼 LinkedIn: www.linkedin.com/in/himansu-sekhar-behura-816133256
+⭐ Acknowledgment
+
+Inspired by real-world platforms like:
+
+LinkedIn
+Internshala
+Indeed
+
+📌 Final Note
+
+This project demonstrates:
+
+Full-stack development skills
+UI/UX design thinking
+Real-world application architecture
 
 
