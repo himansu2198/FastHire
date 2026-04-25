@@ -9,7 +9,7 @@ import { jobApi } from "../../api/jobApi";
 import { applicationApi } from "../../api/applicationApi";
 import { notificationApi } from "../../api/notificationApi";
 import { useAuth } from "../../context/AuthContext";
-import { useProfile } from "../../context/ProfileContext";
+import { useProfile } from "../../hooks/useProfile";
 
 // ── shared card primitives ──────────────────────────────────────────────────
 const Card = ({ children, className = "" }) => (

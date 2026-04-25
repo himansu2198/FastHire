@@ -1,25 +1,38 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+// src/context/ProfileContext.jsx
+import React, { createContext, useState, useCallback } from "react";
 import { profileApi } from "../api/profileApi";
+import { calculateProfileCompletion } from "../utils/calculateProfileCompletion";
 
-const ProfileContext = createContext(null);
+export const ProfileContext = createContext(null);
 
-export const useProfile = () => {
-  const context = useContext(ProfileContext);
-  if (!context) throw new Error("useProfile must be used inside ProfileProvider");
-  return context;
-};
+// ── employer completion (inline, no separate file needed) ─────────────────
+function calcEmployer(profile) {
+  const sections = {
+    "Company Name": !!(profile?.companyName),
+    "Contact Info": !!(profile?.phone && profile?.location),
+    "Website":      !!(profile?.website),
+    "Industry":     !!(profile?.industry),
+    "Description":  !!(profile?.description),
+  };
+  const pct = Math.round(
+    (Object.values(sections).filter(Boolean).length /
+      Object.keys(sections).length) * 100
+  );
+  return { employerCompletionSections: sections, employerCompletionPct: pct };
+}
 
 export const ProfileProvider = ({ children }) => {
   const [profile,        setProfile]        = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
+  // ── FETCH ────────────────────────────────────────────────────────────────
   const fetchProfile = useCallback(async () => {
     setLoadingProfile(true);
     try {
-      const res = await profileApi.getProfile();
-      const p = res?.profile ?? res;
-      setProfile({ ...p });
-      return p;
+      const data = await profileApi.getProfile(); // axiosClient returns res.data
+      const p    = data?.profile ?? data;
+      setProfile(p && p.email ? { ...p } : null);
+      return p ?? null;
     } catch (err) {
       console.error("fetchProfile error:", err);
       return null;
@@ -28,74 +41,65 @@ export const ProfileProvider = ({ children }) => {
     }
   }, []);
 
+  // ── UPDATE ───────────────────────────────────────────────────────────────
   const updateProfile = useCallback(async (formData) => {
+    const payload = { ...formData };
+    if (typeof payload.skills === "string") {
+      payload.skills = payload.skills
+        .split(",").map((s) => s.trim()).filter(Boolean);
+    }
     try {
-      const res = await profileApi.updateProfile(formData);
-      const p = res?.profile ?? res;
-      if (p && typeof p === "object" && p.email) {
+      const data = await profileApi.updateProfile(payload);
+      const p    = data?.profile ?? data;
+      if (p && p.email) {
         setProfile({ ...p });
       } else {
         await fetchProfile();
       }
-      return res;
+      return data;
     } catch (err) {
       console.error("updateProfile error:", err);
       throw err;
     }
   }, [fetchProfile]);
 
+  // ── UPLOAD RESUME ────────────────────────────────────────────────────────
   const uploadResume = useCallback(async (fd) => {
     try {
-      await profileApi.uploadResume(fd);
-      await fetchProfile();
+      const data = await profileApi.uploadResume(fd);
+      if (data?.resumePath) {
+        setProfile((prev) =>
+          prev ? {
+            ...prev,
+            resume: data.resumePath,
+            profileCompleted: data.profileCompleted ?? prev.profileCompleted,
+          } : prev
+        );
+      } else {
+        await fetchProfile();
+      }
+      return data;
     } catch (err) {
       console.error("uploadResume error:", err);
       throw err;
     }
   }, [fetchProfile]);
 
-  const jobSeekerCompletionSections = {
-    "Basic Information": !!(
-      profile?.username &&
-      profile?.phone &&
-      profile?.location &&
-      profile?.professionalTitle
-    ),
-    Skills:     !!(profile?.skills?.length > 0),
-    Experience: !!(profile?.workExperience?.length > 0),
-    Education:  !!(profile?.education?.length > 0),
-    Resume:     !!(profile?.resume),
-  };
+  // ── COMPLETION ───────────────────────────────────────────────────────────
+  const { completionPct, completionSections, sectionWeights } =
+    calculateProfileCompletion(profile);
 
-  const jobSeekerCompletionPct = Math.round(
-    (Object.values(jobSeekerCompletionSections).filter(Boolean).length /
-      Object.keys(jobSeekerCompletionSections).length) * 100
-  );
-
-  const employerCompletionSections = {
-    "Company Name": !!(profile?.companyName),
-    "Contact Info": !!(profile?.phone && profile?.location),
-    "Website":      !!(profile?.website),
-    "Industry":     !!(profile?.industry),
-    "Description":  !!(profile?.description),
-  };
-
-  const employerCompletionPct = Math.round(
-    (Object.values(employerCompletionSections).filter(Boolean).length /
-      Object.keys(employerCompletionSections).length) * 100
-  );
-
-  const isEmployer        = profile?.role === "employer";
-  const completionSections = isEmployer ? employerCompletionSections : jobSeekerCompletionSections;
-  const completionPct      = isEmployer ? employerCompletionPct      : jobSeekerCompletionPct;
+  const { employerCompletionSections, employerCompletionPct } =
+    calcEmployer(profile);
 
   return (
     <ProfileContext.Provider value={{
       profile, setProfile, loadingProfile,
       fetchProfile, updateProfile, uploadResume,
-      completionSections, completionPct,
-      jobSeekerCompletionSections, jobSeekerCompletionPct,
-      employerCompletionSections,  employerCompletionPct,
+      // jobseeker
+      completionPct, completionSections, sectionWeights,
+      // employer
+      employerCompletionSections, employerCompletionPct,
     }}>
       {children}
     </ProfileContext.Provider>

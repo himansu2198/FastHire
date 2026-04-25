@@ -1,14 +1,19 @@
-import React, { useEffect, useState } from "react";
-import { useProfile } from "../../context/ProfileContext";
+// src/pages/jobseeker/ProfilePage.jsx
+import React, { useEffect, useState, useCallback } from "react";
+import { useProfile } from "../../hooks/useProfile";
 import {
   Upload, Check, AlertCircle, Save, User, Mail,
   Phone, MapPin, Briefcase, Edit, FileText, X,
-  Plus, Trash2, GraduationCap, Building2,
+  Plus, Trash2, GraduationCap, Building2, CheckCircle2,
 } from "lucide-react";
 
-// ── shared card primitives ──────────────────────────────────────────────────
+// ── primitives ───────────────────────────────────────────────────────────────
 const Card = ({ children, className = "" }) => (
-  <div className={`bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden ${className}`}>
+  <div
+    className={`bg-white rounded-2xl border border-gray-200 shadow-sm
+                overflow-hidden hover:shadow-md transition-shadow
+                duration-200 ${className}`}
+  >
     {children}
   </div>
 );
@@ -21,7 +26,6 @@ const CardBody = ({ children, className = "" }) => (
   <div className={`px-6 py-5 ${className}`}>{children}</div>
 );
 
-// ── input styles ────────────────────────────────────────────────────────────
 const inputCls =
   "w-full px-4 py-2.5 bg-white text-gray-900 placeholder-gray-400 " +
   "border border-gray-300 rounded-lg text-sm " +
@@ -48,6 +52,50 @@ const emptyEdu = () => ({
   startDate: "", endDate: "", grade: "",
 });
 
+// ── toast ─────────────────────────────────────────────────────────────────────
+const Toast = ({ msg, type, onClose }) => {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  const colors =
+    type === "success"
+      ? "bg-green-600 text-white"
+      : "bg-red-600 text-white";
+
+  return (
+    <div
+      className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg
+                  text-sm font-medium flex items-center gap-2 ${colors}
+                  animate-slide-up`}
+    >
+      {type === "success"
+        ? <CheckCircle2 className="h-4 w-4" />
+        : <AlertCircle  className="h-4 w-4" />}
+      {msg}
+    </div>
+  );
+};
+
+// ── animated progress bar ─────────────────────────────────────────────────────
+const ProgressBar = ({ pct, color = "bg-blue-500" }) => {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setWidth(pct), 120);
+    return () => clearTimeout(t);
+  }, [pct]);
+
+  return (
+    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+      <div
+        className={`h-1.5 rounded-full transition-all duration-700 ease-out ${color}`}
+        style={{ width: `${width}%` }}
+      />
+    </div>
+  );
+};
+
 // ────────────────────────────────────────────────────────────────────────────
 const JobSeekerProfilePage = () => {
   const {
@@ -58,11 +106,13 @@ const JobSeekerProfilePage = () => {
     uploadResume,
     completionSections,
     completionPct,
+    sectionWeights,
   } = useProfile();
 
   const [saving,          setSaving]          = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
   const [isEditing,       setIsEditing]       = useState(false);
+  const [toast,           setToast]           = useState(null); // { msg, type }
 
   const [formData, setFormData] = useState({
     username: "", phone: "", location: "",
@@ -71,12 +121,14 @@ const JobSeekerProfilePage = () => {
   const [workExperience, setWorkExperience] = useState([]);
   const [education,      setEducation]      = useState([]);
 
-  // fetch fresh data on mount
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  const showToast = useCallback((msg, type = "success") => {
+    setToast({ msg, type });
+  }, []);
 
-  // re-sync form whenever profile changes in context
+  // fetch on mount
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
+
+  // sync form when profile loads/changes
   useEffect(() => {
     if (!profile) return;
     setFormData({
@@ -85,32 +137,48 @@ const JobSeekerProfilePage = () => {
       location:            profile.location            || "",
       professionalTitle:   profile.professionalTitle   || "",
       professionalSummary: profile.professionalSummary || "",
-      skills:              profile.skills?.join(", ")  || "",
+      // display comma-separated; backend will re-split on save
+      skills:              Array.isArray(profile.skills)
+                             ? profile.skills.join(", ")
+                             : (profile.skills || ""),
     });
     setWorkExperience(profile.workExperience || []);
-    setEducation(profile.education || []);
+    setEducation(profile.education           || []);
   }, [profile]);
 
   const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleExpChange = (i, field, val) =>
-    setWorkExperience(workExperience.map((item, idx) =>
-      idx === i ? { ...item, [field]: val } : item));
+    setWorkExperience((prev) =>
+      prev.map((item, idx) => (idx === i ? { ...item, [field]: val } : item)));
 
   const handleEduChange = (i, field, val) =>
-    setEducation(education.map((item, idx) =>
-      idx === i ? { ...item, [field]: val } : item));
+    setEducation((prev) =>
+      prev.map((item, idx) => (idx === i ? { ...item, [field]: val } : item)));
 
+  // ── save ──────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setSaving(true);
+     console.log("SENDING payload:", JSON.stringify({ workExperience, education }));
     try {
-      await updateProfile({ ...formData, workExperience, education });
+      // skills: pass as array — ProfileContext will handle string → array too
+      const skillsArray = formData.skills
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      await updateProfile({
+        ...formData,
+        skills: skillsArray,
+        workExperience,
+        education,
+      });
       setIsEditing(false);
-      alert("Profile updated successfully!");
+      showToast("Profile saved successfully!", "success");
     } catch (err) {
       console.error("Failed to update profile:", err);
-      alert("Failed to save profile");
+      showToast("Failed to save profile. Try again.", "error");
     } finally {
       setSaving(false);
     }
@@ -124,25 +192,34 @@ const JobSeekerProfilePage = () => {
       location:            profile.location            || "",
       professionalTitle:   profile.professionalTitle   || "",
       professionalSummary: profile.professionalSummary || "",
-      skills:              profile.skills?.join(", ")  || "",
+      skills:              Array.isArray(profile.skills)
+                             ? profile.skills.join(", ")
+                             : (profile.skills || ""),
     });
     setWorkExperience(profile.workExperience || []);
-    setEducation(profile.education || []);
+    setEducation(profile.education           || []);
     setIsEditing(false);
   };
 
   const handleResumeUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== "application/pdf") { alert("PDF only"); return; }
+    if (file.type !== "application/pdf") {
+      showToast("Only PDF files are allowed.", "error");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("File too large. Max 5 MB.", "error");
+      return;
+    }
     setUploadingResume(true);
     try {
       const fd = new FormData();
       fd.append("resume", file);
       await uploadResume(fd);
-      alert("Resume uploaded!");
-    } catch (err) {
-      alert("Upload failed");
+      showToast("Resume uploaded!", "success");
+    } catch {
+      showToast("Upload failed. Try again.", "error");
     } finally {
       setUploadingResume(false);
     }
@@ -155,8 +232,9 @@ const JobSeekerProfilePage = () => {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600 text-sm">Loading profile...</p>
+          <div className="animate-spin rounded-full h-12 w-12
+                          border-b-2 border-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600 text-sm">Loading profile…</p>
         </div>
       </div>
     );
@@ -164,6 +242,14 @@ const JobSeekerProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
+      {toast && (
+        <Toast
+          msg={toast.msg}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <div className="container mx-auto px-4 max-w-6xl">
 
         {/* Header */}
@@ -174,20 +260,47 @@ const JobSeekerProfilePage = () => {
               Manage your personal information and resume
             </p>
           </div>
-          {!isEditing && (
-            <button onClick={() => setIsEditing(true)}
+          {!isEditing ? (
+            <button
+              onClick={() => setIsEditing(true)}
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700
                          text-white text-sm font-medium px-5 py-2.5 rounded-xl
-                         shadow-sm transition-colors">
+                         shadow-sm transition-colors"
+            >
               <Edit className="h-4 w-4" />Edit Profile
             </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSubmit}
+                disabled={saving}
+                className={`inline-flex items-center gap-2 text-white text-sm
+                            font-medium px-5 py-2.5 rounded-xl shadow-sm
+                            transition-colors ${
+                              saving
+                                ? "bg-gray-300 cursor-not-allowed"
+                                : "bg-blue-600 hover:bg-blue-700"
+                            }`}
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={handleCancel}
+                className="inline-flex items-center gap-2 border border-gray-300
+                           text-gray-700 hover:bg-gray-50 text-sm font-medium
+                           px-5 py-2.5 rounded-xl transition-colors"
+              >
+                <X className="h-4 w-4" />Cancel
+              </button>
+            </div>
           )}
         </div>
 
         {/* Incomplete alert */}
         {!profile?.profileCompleted && (
-          <div className="mb-6 flex items-start gap-3 bg-yellow-50 border border-yellow-200
-                          rounded-2xl px-5 py-4">
+          <div className="mb-6 flex items-start gap-3 bg-yellow-50 border
+                          border-yellow-200 rounded-2xl px-5 py-4">
             <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-sm font-semibold text-yellow-800">
@@ -202,7 +315,7 @@ const JobSeekerProfilePage = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-          {/* ══ LEFT COLUMN ══ */}
+          {/* ══ LEFT ══ */}
           <div className="lg:col-span-2 space-y-6">
 
             {/* Basic Information */}
@@ -213,51 +326,76 @@ const JobSeekerProfilePage = () => {
                   <div className="space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
-                        <Label icon={User} text="Full Name *" />
-                        <input type="text" name="username" value={formData.username}
-                          onChange={handleChange} placeholder="John Doe"
-                          className={inputCls} />
+                        <Label icon={User}  text="Full Name *" />
+                        <input
+                          type="text" name="username"
+                          value={formData.username}
+                          onChange={handleChange}
+                          placeholder="John Doe"
+                          className={inputCls}
+                        />
                       </div>
                       <div>
                         <Label icon={Mail} text="Email Address" />
-                        <input type="email" value={profile?.email || ""}
-                          disabled className={disabledCls} />
+                        <input
+                          type="email" value={profile?.email || ""}
+                          disabled className={disabledCls}
+                        />
                       </div>
                       <div>
                         <Label icon={Phone} text="Phone Number *" />
-                        <input type="tel" name="phone" value={formData.phone}
-                          onChange={handleChange} placeholder="+91 9876543210"
-                          className={inputCls} />
+                        <input
+                          type="tel" name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          placeholder="+91 9876543210"
+                          className={inputCls}
+                        />
                       </div>
                       <div>
                         <Label icon={MapPin} text="Location *" />
-                        <input type="text" name="location" value={formData.location}
-                          onChange={handleChange} placeholder="Bengaluru, India"
-                          className={inputCls} />
+                        <input
+                          type="text" name="location"
+                          value={formData.location}
+                          onChange={handleChange}
+                          placeholder="Bengaluru, India"
+                          className={inputCls}
+                        />
                       </div>
                     </div>
                     <div>
                       <Label icon={Briefcase} text="Professional Title *" />
-                      <input type="text" name="professionalTitle"
+                      <input
+                        type="text" name="professionalTitle"
                         value={formData.professionalTitle}
-                        onChange={handleChange} placeholder="Frontend Developer"
-                        className={inputCls} />
+                        onChange={handleChange}
+                        placeholder="Frontend Developer"
+                        className={inputCls}
+                      />
                     </div>
                     <div>
-                      <Label text="Professional Summary *" />
-                      <textarea name="professionalSummary"
+                      <Label text="Professional Summary (Bio) *" />
+                      <textarea
+                        name="professionalSummary"
                         value={formData.professionalSummary}
-                        onChange={handleChange} rows={4}
-                        placeholder="Tell us about your experience..."
-                        className={`${inputCls} resize-none`} />
+                        onChange={handleChange}
+                        rows={4}
+                        placeholder="Tell us about your experience…"
+                        className={`${inputCls} resize-none`}
+                      />
                     </div>
                     <div>
                       <Label text="Skills * (comma-separated)" />
-                      <input type="text" name="skills" value={formData.skills}
+                      <input
+                        type="text" name="skills"
+                        value={formData.skills}
                         onChange={handleChange}
                         placeholder="React, JavaScript, Node.js"
-                        className={inputCls} />
-                      <p className="mt-1 text-xs text-gray-400">Separate with commas</p>
+                        className={inputCls}
+                      />
+                      <p className="mt-1 text-xs text-gray-400">
+                        Separate skills with commas
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -274,7 +412,9 @@ const JobSeekerProfilePage = () => {
                                         text-gray-400 uppercase tracking-wide mb-1">
                             <Icon className="h-3.5 w-3.5" />{label}
                           </p>
-                          <p className="text-gray-900 text-sm font-medium">{value || "—"}</p>
+                          <p className="text-gray-900 text-sm font-medium">
+                            {value || "—"}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -290,9 +430,7 @@ const JobSeekerProfilePage = () => {
                     {profile?.professionalSummary && (
                       <div>
                         <p className="text-xs font-semibold text-gray-400
-                                      uppercase tracking-wide mb-1">
-                          Professional Summary
-                        </p>
+                                      uppercase tracking-wide mb-1">Bio</p>
                         <p className="text-gray-700 text-sm leading-relaxed">
                           {profile.professionalSummary}
                         </p>
@@ -304,9 +442,11 @@ const JobSeekerProfilePage = () => {
                                       uppercase tracking-wide mb-2">Skills</p>
                         <div className="flex flex-wrap gap-2">
                           {profile.skills.map((s, i) => (
-                            <span key={i}
+                            <span
+                              key={i}
                               className="px-3 py-1 bg-blue-50 text-blue-700 text-xs
-                                         font-semibold rounded-full border border-blue-100">
+                                         font-semibold rounded-full border border-blue-100"
+                            >
                               {s}
                             </span>
                           ))}
@@ -330,89 +470,127 @@ const JobSeekerProfilePage = () => {
                       </p>
                     )}
                     {workExperience.map((exp, i) => (
-                      <div key={i}
-                        className="border border-gray-200 rounded-xl p-4 space-y-4 relative">
+                      <div
+                        key={i}
+                        className="border border-gray-200 rounded-xl p-4 space-y-4 relative"
+                      >
                         <button
-                          onClick={() => setWorkExperience(
-                            workExperience.filter((_, idx) => idx !== i)
-                          )}
-                          className="absolute top-3 right-3 text-gray-400 hover:text-red-500">
+                          onClick={() =>
+                            setWorkExperience((prev) =>
+                              prev.filter((_, idx) => idx !== i))
+                          }
+                          className="absolute top-3 right-3 text-gray-400 hover:text-red-500
+                                     transition-colors"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label icon={Briefcase} text="Job Title *" />
-                            <input type="text" value={exp.jobTitle}
-                              onChange={(e) => handleExpChange(i, "jobTitle", e.target.value)}
-                              placeholder="Frontend Developer" className={inputCls} />
+                            <input
+                              type="text" value={exp.jobTitle}
+                              onChange={(e) =>
+                                handleExpChange(i, "jobTitle", e.target.value)}
+                              placeholder="Frontend Developer"
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label icon={Building2} text="Company *" />
-                            <input type="text" value={exp.company}
-                              onChange={(e) => handleExpChange(i, "company", e.target.value)}
-                              placeholder="TechNova" className={inputCls} />
+                            <input
+                              type="text" value={exp.company}
+                              onChange={(e) =>
+                                handleExpChange(i, "company", e.target.value)}
+                              placeholder="TechNova"
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label icon={MapPin} text="Location" />
-                            <input type="text" value={exp.location}
-                              onChange={(e) => handleExpChange(i, "location", e.target.value)}
-                              placeholder="Bengaluru" className={inputCls} />
+                            <input
+                              type="text" value={exp.location}
+                              onChange={(e) =>
+                                handleExpChange(i, "location", e.target.value)}
+                              placeholder="Bengaluru"
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label text="Start Date" />
-                            <input type="month" value={exp.startDate}
-                              onChange={(e) => handleExpChange(i, "startDate", e.target.value)}
-                              className={inputCls} />
+                            <input
+                              type="month" value={exp.startDate}
+                              onChange={(e) =>
+                                handleExpChange(i, "startDate", e.target.value)}
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label text="End Date" />
-                            <input type="month" value={exp.endDate}
-                              onChange={(e) => handleExpChange(i, "endDate", e.target.value)}
+                            <input
+                              type="month" value={exp.endDate}
+                              onChange={(e) =>
+                                handleExpChange(i, "endDate", e.target.value)}
                               disabled={exp.current}
-                              className={exp.current ? disabledCls : inputCls} />
+                              className={exp.current ? disabledCls : inputCls}
+                            />
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            <input type="checkbox" id={`cur-${i}`}
+                            <input
+                              type="checkbox" id={`cur-${i}`}
                               checked={exp.current}
                               onChange={(e) =>
                                 handleExpChange(i, "current", e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300 text-blue-600" />
-                            <label htmlFor={`cur-${i}`} className="text-sm text-gray-700">
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                            />
+                            <label
+                              htmlFor={`cur-${i}`}
+                              className="text-sm text-gray-700"
+                            >
                               Currently working here
                             </label>
                           </div>
                         </div>
                         <div>
                           <Label text="Description" />
-                          <textarea value={exp.description}
+                          <textarea
+                            value={exp.description}
                             onChange={(e) =>
                               handleExpChange(i, "description", e.target.value)}
-                            rows={3} placeholder="Describe your role..."
-                            className={`${inputCls} resize-none`} />
+                            rows={3}
+                            placeholder="Describe your role…"
+                            className={`${inputCls} resize-none`}
+                          />
                         </div>
                       </div>
                     ))}
                     <button
-                      onClick={() => setWorkExperience([...workExperience, emptyExp()])}
+                      onClick={() =>
+                        setWorkExperience((prev) => [...prev, emptyExp()])
+                      }
                       className="w-full py-2.5 border-2 border-dashed border-gray-300
                                  text-gray-500 hover:border-blue-400 hover:text-blue-600
                                  rounded-xl text-sm font-medium flex items-center
-                                 justify-center gap-2 transition-colors">
+                                 justify-center gap-2 transition-colors"
+                    >
                       <Plus className="h-4 w-4" />Add Work Experience
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-5">
-                    {(!profile?.workExperience ||
-                      profile.workExperience.length === 0) ? (
+                    {!profile?.workExperience?.length ? (
                       <p className="text-sm text-gray-400 text-center py-4">
                         No work experience added.
                       </p>
                     ) : (
                       profile.workExperience.map((exp, i) => (
-                        <div key={i} className={`pb-5 ${
-                          i < profile.workExperience.length - 1
-                            ? "border-b border-gray-100" : ""}`}>
+                        <div
+                          key={i}
+                          className={`pb-5 ${
+                            i < profile.workExperience.length - 1
+                              ? "border-b border-gray-100"
+                              : ""
+                          }`}
+                        >
                           <div className="flex items-start justify-between">
                             <div>
                               <p className="text-sm font-semibold text-gray-900">
@@ -456,79 +634,110 @@ const JobSeekerProfilePage = () => {
                       </p>
                     )}
                     {education.map((edu, i) => (
-                      <div key={i}
-                        className="border border-gray-200 rounded-xl p-4 space-y-4 relative">
+                      <div
+                        key={i}
+                        className="border border-gray-200 rounded-xl p-4 space-y-4 relative"
+                      >
                         <button
-                          onClick={() => setEducation(
-                            education.filter((_, idx) => idx !== i)
-                          )}
-                          className="absolute top-3 right-3 text-gray-400 hover:text-red-500">
+                          onClick={() =>
+                            setEducation((prev) =>
+                              prev.filter((_, idx) => idx !== i))
+                          }
+                          className="absolute top-3 right-3 text-gray-400
+                                     hover:text-red-500 transition-colors"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label icon={GraduationCap} text="Degree *" />
-                            <input type="text" value={edu.degree}
-                              onChange={(e) => handleEduChange(i, "degree", e.target.value)}
-                              placeholder="B.Tech / B.Sc" className={inputCls} />
+                            <input
+                              type="text" value={edu.degree}
+                              onChange={(e) =>
+                                handleEduChange(i, "degree", e.target.value)}
+                              placeholder="B.Tech / B.Sc"
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label icon={Building2} text="Institution *" />
-                            <input type="text" value={edu.institution}
+                            <input
+                              type="text" value={edu.institution}
                               onChange={(e) =>
                                 handleEduChange(i, "institution", e.target.value)}
-                              placeholder="IIT Bombay" className={inputCls} />
+                              placeholder="IIT Bombay"
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label text="Field of Study" />
-                            <input type="text" value={edu.fieldOfStudy}
+                            <input
+                              type="text" value={edu.fieldOfStudy}
                               onChange={(e) =>
                                 handleEduChange(i, "fieldOfStudy", e.target.value)}
-                              placeholder="Computer Science" className={inputCls} />
+                              placeholder="Computer Science"
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label text="Grade / CGPA" />
-                            <input type="text" value={edu.grade}
-                              onChange={(e) => handleEduChange(i, "grade", e.target.value)}
-                              placeholder="8.5 / 10" className={inputCls} />
+                            <input
+                              type="text" value={edu.grade}
+                              onChange={(e) =>
+                                handleEduChange(i, "grade", e.target.value)}
+                              placeholder="8.5 / 10"
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label text="Start Date" />
-                            <input type="month" value={edu.startDate}
+                            <input
+                              type="month" value={edu.startDate}
                               onChange={(e) =>
                                 handleEduChange(i, "startDate", e.target.value)}
-                              className={inputCls} />
+                              className={inputCls}
+                            />
                           </div>
                           <div>
                             <Label text="End Date" />
-                            <input type="month" value={edu.endDate}
+                            <input
+                              type="month" value={edu.endDate}
                               onChange={(e) =>
                                 handleEduChange(i, "endDate", e.target.value)}
-                              className={inputCls} />
+                              className={inputCls}
+                            />
                           </div>
                         </div>
                       </div>
                     ))}
                     <button
-                      onClick={() => setEducation([...education, emptyEdu()])}
+                      onClick={() =>
+                        setEducation((prev) => [...prev, emptyEdu()])
+                      }
                       className="w-full py-2.5 border-2 border-dashed border-gray-300
                                  text-gray-500 hover:border-blue-400 hover:text-blue-600
                                  rounded-xl text-sm font-medium flex items-center
-                                 justify-center gap-2 transition-colors">
+                                 justify-center gap-2 transition-colors"
+                    >
                       <Plus className="h-4 w-4" />Add Education
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-5">
-                    {(!profile?.education || profile.education.length === 0) ? (
+                    {!profile?.education?.length ? (
                       <p className="text-sm text-gray-400 text-center py-4">
                         No education added.
                       </p>
                     ) : (
                       profile.education.map((edu, i) => (
-                        <div key={i} className={`pb-5 ${
-                          i < profile.education.length - 1
-                            ? "border-b border-gray-100" : ""}`}>
+                        <div
+                          key={i}
+                          className={`pb-5 ${
+                            i < profile.education.length - 1
+                              ? "border-b border-gray-100"
+                              : ""
+                          }`}
+                        >
                           <div className="flex items-start justify-between">
                             <div>
                               <p className="text-sm font-semibold text-gray-900">
@@ -556,29 +765,36 @@ const JobSeekerProfilePage = () => {
               </CardBody>
             </Card>
 
-            {/* Save / Cancel */}
+            {/* Sticky save bar when editing (mobile UX) */}
             {isEditing && (
               <div className="flex gap-3">
-                <button onClick={handleSubmit} disabled={saving}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 py-3
-                              rounded-xl text-sm font-semibold transition-colors
+                <button
+                  onClick={handleSubmit}
+                  disabled={saving}
+                  className={`flex-1 inline-flex items-center justify-center gap-2
+                              py-3 rounded-xl text-sm font-semibold transition-colors
                               ${saving
                                 ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"}`}>
+                                : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                              }`}
+                >
                   <Save className="h-4 w-4" />
-                  {saving ? "Saving..." : "Save All Changes"}
+                  {saving ? "Saving…" : "Save All Changes"}
                 </button>
-                <button onClick={handleCancel}
-                  className="flex-1 inline-flex items-center justify-center gap-2 py-3
-                             rounded-xl text-sm font-semibold border border-gray-300
-                             text-gray-700 hover:bg-gray-50 transition-colors">
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 inline-flex items-center justify-center gap-2
+                             py-3 rounded-xl text-sm font-semibold border
+                             border-gray-300 text-gray-700 hover:bg-gray-50
+                             transition-colors"
+                >
                   <X className="h-4 w-4" />Cancel
                 </button>
               </div>
             )}
           </div>
 
-          {/* ══ RIGHT COLUMN ══ */}
+          {/* ══ RIGHT ══ */}
           <div className="lg:col-span-1 space-y-6">
 
             {/* Resume */}
@@ -590,8 +806,12 @@ const JobSeekerProfilePage = () => {
                                   border-green-200 rounded-xl px-4 py-3 mb-5">
                     <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-green-800">Resume uploaded</p>
-                      <p className="text-xs text-green-600 mt-0.5">Ready for applications</p>
+                      <p className="text-sm font-semibold text-green-800">
+                        Resume uploaded
+                      </p>
+                      <p className="text-xs text-green-600 mt-0.5">
+                        Ready for applications
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -599,74 +819,94 @@ const JobSeekerProfilePage = () => {
                                   border-red-200 rounded-xl px-4 py-3 mb-5">
                     <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-red-800">Resume required</p>
-                      <p className="text-xs text-red-600 mt-0.5">Upload to apply for jobs</p>
+                      <p className="text-sm font-semibold text-red-800">
+                        Resume required
+                      </p>
+                      <p className="text-xs text-red-600 mt-0.5">
+                        Upload to apply for jobs
+                      </p>
                     </div>
                   </div>
                 )}
-                <div className="border-2 border-dashed border-gray-300 rounded-xl
-                                flex flex-col items-center justify-center gap-3 px-4 py-8
-                                hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-xl
+                              flex flex-col items-center justify-center gap-3
+                              px-4 py-8 hover:border-blue-400 hover:bg-blue-50/30
+                              transition-colors"
+                >
                   <FileText className="h-10 w-10 text-gray-300" />
                   <p className="text-sm text-gray-500 text-center">
                     Upload your resume<br />
-                    <span className="text-xs text-gray-400">(PDF only)</span>
+                    <span className="text-xs text-gray-400">(PDF only, max 5 MB)</span>
                   </p>
                   <label className="cursor-pointer">
-                    <span className="inline-flex items-center justify-center gap-2
-                                     bg-blue-600 hover:bg-blue-700 text-white text-sm
-                                     font-medium px-5 py-2.5 rounded-xl shadow-sm
-                                     transition-colors whitespace-nowrap">
+                    <span
+                      className="inline-flex items-center justify-center gap-2
+                                 bg-blue-600 hover:bg-blue-700 text-white text-sm
+                                 font-medium px-5 py-2.5 rounded-xl shadow-sm
+                                 transition-colors whitespace-nowrap"
+                    >
                       <Upload className="h-4 w-4" />
                       {uploadingResume
-                        ? "Uploading..."
-                        : profile?.resume ? "Replace" : "Upload Resume"}
+                        ? "Uploading…"
+                        : profile?.resume ? "Replace Resume" : "Upload Resume"}
                     </span>
-                    <input type="file" accept=".pdf" onChange={handleResumeUpload}
-                      className="hidden" disabled={uploadingResume} />
+                    <input
+                      type="file" accept=".pdf"
+                      onChange={handleResumeUpload}
+                      className="hidden"
+                      disabled={uploadingResume}
+                    />
                   </label>
-                  <p className="text-xs text-gray-400">Max 5 MB</p>
                 </div>
-                <p className="text-xs text-gray-400 text-center mt-4">
-                  A complete resume increases hiring chances by 40%.
-                </p>
               </CardBody>
             </Card>
 
-            {/* Profile Completion */}
+            {/* Profile Completion (weighted bars) */}
             <Card>
               <CardHeader title="Profile Completion" />
               <CardBody>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-3xl font-bold text-blue-600">{completionPct}%</span>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-3xl font-bold text-blue-600 tabular-nums">
+                    {completionPct}%
+                  </span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2 mb-5">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-700 ${barColor(completionPct)}`}
-                    style={{ width: `${completionPct}%` }} />
-                </div>
-                <div className="space-y-3">
+                <ProgressBar
+                  pct={completionPct}
+                  color={barColor(completionPct)}
+                />
+                <div className="mt-5 space-y-4">
                   {Object.entries(completionSections).map(([label, done]) => (
                     <div key={label}>
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm text-gray-700">{label}</span>
-                        <span className={`text-xs font-bold ${
-                          done ? "text-green-600" : "text-red-500"}`}>
-                          {done ? "100%" : "0%"}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-700">{label}</span>
+                          {sectionWeights?.[label] && (
+                            <span className="text-xs text-gray-400">
+                              ({sectionWeights[label]}%)
+                            </span>
+                          )}
+                        </div>
+                        <span
+                          className={`text-xs font-bold ${
+                            done ? "text-green-600" : "text-red-500"
+                          }`}
+                        >
+                          {done ? "✓" : "Missing"}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5">
-                        <div
-                          className={`h-1.5 rounded-full transition-all duration-500 ${
-                            done ? "bg-green-500" : "bg-gray-200"}`}
-                          style={{ width: done ? "100%" : "0%" }} />
-                      </div>
+                      <ProgressBar
+                        pct={done ? 100 : 0}
+                        color={done ? "bg-green-500" : "bg-gray-200"}
+                      />
                     </div>
                   ))}
                 </div>
                 <div className="mt-5 pt-4 border-t border-gray-100 flex justify-between">
                   <span className="text-sm text-gray-500">Overall</span>
-                  <span className="text-lg font-bold text-blue-600">{completionPct}%</span>
+                  <span className="text-lg font-bold text-blue-600">
+                    {completionPct}%
+                  </span>
                 </div>
               </CardBody>
             </Card>
@@ -686,13 +926,17 @@ const JobSeekerProfilePage = () => {
                         <p className="text-xs text-gray-400">{sub}</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
-                        <div className="w-10 h-6 bg-gray-200 rounded-full peer
-                                        peer-checked:bg-blue-600
-                                        after:content-[''] after:absolute after:top-[2px]
-                                        after:left-[2px] after:bg-white after:border
-                                        after:rounded-full after:h-5 after:w-5
-                                        after:transition-all peer-checked:after:translate-x-4" />
+                        <input
+                          type="checkbox" defaultChecked className="sr-only peer"
+                        />
+                        <div
+                          className="w-10 h-6 bg-gray-200 rounded-full peer
+                                      peer-checked:bg-blue-600
+                                      after:content-[''] after:absolute after:top-[2px]
+                                      after:left-[2px] after:bg-white after:border
+                                      after:rounded-full after:h-5 after:w-5
+                                      after:transition-all peer-checked:after:translate-x-4"
+                        />
                       </label>
                     </div>
                   ))}
