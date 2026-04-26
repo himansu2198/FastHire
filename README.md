@@ -153,126 +153,119 @@ https://job-listing-portal-theta.vercel.app/
 
 ---
 
-## 📁 Project Structure
-
-### 📦 Frontend
-
-
-frontend/
-└── src/
-├── api/
-│ ├── authApi.js
-│ ├── jobApi.js
-│ ├── profileApi.js
+📁 Project Structure
+fastHire/
 │
-├── components/
-│ ├── common/
-│ │ ├── Navbar.jsx
-│ │ ├── Footer.jsx
-│ │ ├── Loader.jsx
-│ │
-│ ├── dashboard/
-│ │ ├── DashboardHeader.jsx
-│ │ ├── StatsCard.jsx
-│ │ ├── ProfileCompletionCard.jsx
-│ │
-│ ├── profile/
-│ │ ├── ProfileForm.jsx
-│ │ ├── SkillsSection.jsx
-│ │ ├── ExperienceSection.jsx
-│ │ ├── ResumeUpload.jsx
-│ │
-│ ├── jobs/
-│ │ ├── JobCard.jsx
-│ │ ├── JobList.jsx
-│ │ ├── JobFilterBar.jsx
+├── frontend/                      # React Frontend
+│   ├── public/
+│   │
+│   └── src/
+│       ├── api/
+│       │   ├── authApi.js
+│       │   ├── jobApi.js
+│       │   └── profileApi.js
+│       │
+│       ├── components/
+│       │   ├── common/
+│       │   │   ├── Navbar.jsx
+│       │   │   ├── Footer.jsx
+│       │   │   └── Loader.jsx
+│       │   │
+│       │   ├── dashboard/
+│       │   │   ├── DashboardHeader.jsx
+│       │   │   ├── StatsCard.jsx
+│       │   │   └── ProfileCompletionCard.jsx
+│       │   │
+│       │   ├── profile/
+│       │   │   ├── ProfileForm.jsx
+│       │   │   ├── SkillsSection.jsx
+│       │   │   ├── ExperienceSection.jsx
+│       │   │   └── ResumeUpload.jsx
+│       │   │
+│       │   └── jobs/
+│       │       ├── JobCard.jsx
+│       │       ├── JobList.jsx
+│       │       └── JobFilterBar.jsx
+│       │
+│       ├── context/
+│       │   ├── AuthContext.jsx
+│       │   └── ProfileContext.jsx
+│       │
+│       ├── hooks/
+│       │   ├── useAuth.js
+│       │   └── useProfile.js
+│       │
+│       ├── pages/
+│       │   ├── HomePage.jsx
+│       │   ├── LoginPage.jsx
+│       │   ├── RegisterPage.jsx
+│       │   ├── Dashboard.jsx
+│       │   ├── ProfilePage.jsx
+│       │   ├── EditProfilePage.jsx
+│       │   ├── JobListPage.jsx
+│       │   ├── JobDetailPage.jsx
+│       │   └── MyApplications.jsx
+│       │
+│       ├── utils/
+│       │   ├── calculateProfileCompletion.js
+│       │   └── formatDate.js
+│       │
+│       ├── styles/
+│       │   └── globals.css
+│       │
+│       ├── App.jsx
+│       └── main.jsx
 │
-├── context/
-│ ├── AuthContext.jsx
-│ ├── ProfileContext.jsx
+├── backend/                       # Node.js Backend
+│   ├── src/
+│   │   ├── controllers/
+│   │   │   ├── authController.js
+│   │   │   ├── jobController.js
+│   │   │   └── profileController.js
+│   │   │
+│   │   ├── models/
+│   │   │   ├── User.js
+│   │   │   ├── Job.js
+│   │   │   └── JobSeekerProfile.js
+│   │   │
+│   │   ├── routes/
+│   │   │   ├── authRoutes.js
+│   │   │   ├── jobRoutes.js
+│   │   │   └── profileRoutes.js
+│   │   │
+│   │   ├── middleware/
+│   │   │   └── authMiddleware.js
+│   │   │
+│   │   ├── utils/
+│   │   │   └── calculateCompletion.js
+│   │   │
+│   │   ├── config/
+│   │   │   └── db.js
+│   │   │
+│   │   └── server.js
+│   │
+│   └── .env
 │
-├── hooks/
-│ ├── useAuth.js
-│ ├── useProfile.js
-│
-├── pages/
-│ ├── public/
-│ │ ├── HomePage.jsx
-│ │ ├── JobListPage.jsx
-│ │ ├── JobDetailPage.jsx
-│ │ ├── LoginPage.jsx
-│ │ ├── RegisterPage.jsx
-│ │
-│ ├── jobseeker/
-│ │ ├── Dashboard.jsx
-│ │ ├── ProfilePage.jsx
-│ │ ├── EditProfilePage.jsx
-│
-├── utils/
-│ ├── calculateProfileCompletion.js
-│ ├── formatDate.js
-│
-├── styles/
-│ ├── globals.css
-│
-├── App.jsx
-├── main.jsx
-
-
----
-
-### 📦 Backend
-
-
-backend/
-└── src/
-├── controllers/
-│ ├── authController.js
-│ ├── jobController.js
-│ ├── profileController.js
-│
-├── models/
-│ ├── User.js
-│ ├── Job.js
-│ ├── JobSeekerProfile.js
-│
-├── routes/
-│ ├── authRoutes.js
-│ ├── jobRoutes.js
-│ ├── profileRoutes.js
-│
-├── middleware/
-│ ├── authMiddleware.js
-│
-├── utils/
-│ ├── calculateCompletion.js
-│
-├── config/
-│ ├── db.js
-│
-└── server.js
+├── .gitignore
+├── README.md
 
 ---
 
 🔥 Key Features Highlight
 ✅ Dynamic Profile Completion System
-Calculates completion % based on real user data
-Updates instantly on profile changes
-Drives better user engagement
-✅ Role-Based System
+Calculates completion percentage based on real user data and updates instantly.
+🔐 Role-Based System
 Separate flows for:
 Job Seekers
 Employers
-Secure route protection
-✅ Scalable Architecture
-Modular folder structure
-Reusable components
-Clean separation of concerns
-
---- 
-
+🛡️ Secure Route Protection
+Authentication-based protected routes using JWT.
+🧩 Scalable Architecture
+Modular folder structure with reusable components.
+⚡ Real-time UI Updates
+Dashboard reflects profile changes instantly.
 ⚡ Installation & Setup
-1️⃣ Clone the repository
+1️⃣ Clone the Repository
 git clone https://github.com/your-username/fasthire.git
 cd fasthire
 2️⃣ Setup Frontend
@@ -283,13 +276,14 @@ npm run dev
 cd backend
 npm install
 npm run server
-4️⃣ Environment Variables
+🔐 Environment Variables
 
-Create .env in backend:
+Create a .env file inside the backend folder:
 
 PORT=5000
-MONGO_URI=your_mongodb_url
+MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_secret_key
+
 🚧 Future Improvements
 🔔 Real-time notifications
 💬 Chat between employer & candidate
