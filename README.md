@@ -1,23 +1,39 @@
 🚀 FastHire — Job Portal Platform
 
-A full-stack Job Portal Web Application that connects job seekers with employers through a modern, scalable, and role-based system.
+A Full-stack Job Portal Web Application that connects job seekers with employers through a modern, scalable, and role-based system.
 
 Built with real-world hiring workflows, this project focuses on clean UI/UX, modular architecture, and dynamic data-driven dashboards.
-
+---
 🌐 Live Demo
+https://job-listing-portal-theta.vercel.app/
 
-I will add this give me some time.
 
 📸 Screenshots
 🏠 Homepage
+<img width="1889" height="920" alt="image" src="https://github.com/user-attachments/assets/5722d74b-929f-436f-bf23-09d21f872552" />
+<img width="1881" height="920" alt="image" src="https://github.com/user-attachments/assets/c9219fc7-a60f-4dd5-81d2-54f384dc6684" />
+<img width="1870" height="732" alt="image" src="https://github.com/user-attachments/assets/aacfbe13-c0be-4afe-b630-6935a24453e1" />
+---
+
 
 🔐 Login / Register
+<img width="1884" height="910" alt="image" src="https://github.com/user-attachments/assets/190e02ea-6a9c-4012-9b01-9eacb820f426" />
+<img width="1888" height="901" alt="image" src="https://github.com/user-attachments/assets/6f262558-ada4-49f6-91c8-6bbeb8c07728" />
+---
+
 
 💼 Job Listings
-
+<img width="1882" height="857" alt="image" src="https://github.com/user-attachments/assets/5215c0da-1b6d-46e4-a0b1-ff3564dd78d2" />
+<img width="1883" height="892" alt="image" src="https://github.com/user-attachments/assets/ec502892-35c2-436c-844b-9d3febdd3863" />
+---
 📄 Job Details
-
+<img width="1592" height="858" alt="image" src="https://github.com/user-attachments/assets/0023ea24-98c7-4e37-bdc3-eb29ce9cc628" />
+---
 # 📊 Job Seeker Dashboard & Features
+<img width="1872" height="844" alt="image" src="https://github.com/user-attachments/assets/44f25cbe-0a33-4bf9-b5e0-3b16799cafc7" />
+<img width="1412" height="770" alt="image" src="https://github.com/user-attachments/assets/aad4cadc-ed44-4814-bd18-1fd1af3b355d" />
+
+
 
 ---
 
