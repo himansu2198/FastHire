@@ -122,7 +122,8 @@ const EmployerDashboard = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Welcome, {profile?.companyName || user?.username || "Employer"} 👋
+              Welcome, {user?.username || "Employer"} 👋
+            <p className="text-gray-500 mt-1 text-sm">{profile?.companyName || "Manage your jobs, applications and hiring"}</p> 
             </h1>
             <p className="text-gray-500 mt-1 text-sm">
               Manage your jobs, applications and hiring
